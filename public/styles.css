@@ -1,10 +1,8 @@
-<!--
-  Stylesheet.html — all CSS for the app, inlined into the page by Code.gs include().
-  Vanilla CSS, no framework. Uses CSS custom properties (variables) up top so the
-  whole look can be retuned in one place. Layout is a responsive card grid that
-  collapses nicely onto a shop-floor tablet.
--->
-<style>
+/*
+  styles.css — all styling for the Ink Inventory app.
+  Vanilla CSS, no framework. Design tokens (CSS variables) up top so the whole
+  look can be retuned in one place. Responsive card grid, tablet-friendly.
+*/
   /* ---- design tokens ---------------------------------------------------- */
   :root {
     --bg:        #0f1115;
@@ -231,4 +229,3 @@
     .search { flex: 1; min-width: 0; }
     .filters { flex-direction: column; align-items: stretch; }
   }
-</style>

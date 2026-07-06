@@ -1,10 +1,19 @@
+<!doctype html>
 <!--
-  Index.html — the single page served to the browser.
-  Apps Script inlines the CSS and JS partials via the include() helper in Code.gs,
-  so the whole app ships as ONE document (how HtmlService prefers to work).
+  Ink Inventory — internal print-shop tool.
+  Static page served by Cloudflare Pages; data lives in Cloudflare D1 and is
+  read/written through the API in /functions/api (same-origin fetch calls).
 -->
-<!-- Styles first so the page paints correctly as it loads. -->
-<?!= include('Stylesheet'); ?>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Ink Inventory</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%234f8cff'/></svg>" />
+</head>
+<body>
 
 <!-- ======================= TOP BAR ======================= -->
 <header class="topbar">
@@ -32,7 +41,7 @@
 
 <!-- ======================= FILTER BAR ======================= -->
 <section class="filters">
-  <!-- Color-family chips get injected here by JavaScript.html. -->
+  <!-- Color-family chips get injected here by app.js. -->
   <div id="familyChips" class="chips" aria-label="Filter by color family"></div>
 
   <div class="filters__right">
@@ -41,7 +50,7 @@
       <span>Show used-up</span>
     </label>
 
-    <!-- "Close match" helper (nice-to-have). Enter a hex or a Pantone code. -->
+    <!-- "Close match" helper: enter a target hex or Pantone code. -->
     <div class="match">
       <input id="matchInput" class="search search--sm" type="text" placeholder="Closest to… (#hex or code)" autocomplete="off" />
       <button id="matchBtn" class="btn btn--ghost">Find</button>
@@ -69,15 +78,14 @@
     </div>
 
     <form id="inkForm" class="form">
-      <!-- Hidden fields carry identity info for edits. -->
-      <input type="hidden" id="f_rowNumber" />
-      <input type="hidden" id="f_originalPantone" />
+      <!-- Hidden field carries the database id when editing. -->
+      <input type="hidden" id="f_id" />
 
       <label class="field">
         <span>Pantone code <em>*</em></span>
-        <!-- type=text on purpose so "165 U" / "P-115-5" never coerce to a number. -->
+        <!-- type=text on purpose so "165 U" / "P-115-5" stay exactly as typed. -->
         <input id="f_pantone" type="text" maxlength="60" required autocomplete="off" />
-        <small class="hint">Stored exactly as typed (text). e.g. 7706, 185 C, Rhodamine Red</small>
+        <small class="hint">Stored exactly as typed. e.g. 7706, 185, 165 U, Rhodamine Red</small>
       </label>
 
       <label class="field">
@@ -128,6 +136,8 @@
 <!-- Toast for success / error messages. -->
 <div id="toast" class="toast" hidden></div>
 
-<!-- Bundled Pantone hex lookup, then the app logic. Order matters: data first. -->
-<?!= include('PantoneData'); ?>
-<?!= include('JavaScript'); ?>
+<!-- Data first, then the app logic that reads it. -->
+<script src="/pantone-data.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

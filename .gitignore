@@ -1,6 +1,10 @@
-# Apps Script project credentials/pointers — machine-specific, never commit
+# Local dev artifacts — never commit
+.wrangler/
+.dev.vars
+node_modules/
+
+# Legacy Apps Script pointer (if ever recreated)
 .clasp.json
 
 # OS noise
 .DS_Store
-node_modules/

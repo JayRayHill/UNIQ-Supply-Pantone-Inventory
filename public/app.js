@@ -1,11 +1,13 @@
-<!--
-  JavaScript.html — all client-side logic, inlined by Code.gs include().
-  Written to be readable if you're strong in HTML/CSS and still learning JS:
-    - We keep ONE `state` object as the single source of truth for the UI.
-    - Any time state changes, we call render() to rebuild the visible cards.
-    - Talking to the server is done with google.script.run (Apps Script's bridge).
--->
-<script>
+/**
+ * app.js — all client-side logic for the Ink Inventory app.
+ * Written to be readable if you're strong in HTML/CSS and still learning JS:
+ *   - ONE `state` object is the single source of truth for the UI.
+ *   - Any time state changes, render() rebuilds the visible cards.
+ *   - The server is a small same-origin API (see /functions/api):
+ *       GET  /api/inventory  -> { inks, families, generatedAt }
+ *       POST /api/inks       -> add    -> { ok, message, inventory }
+ *       PUT  /api/inks       -> update -> { ok, message, inventory }
+ */
 (function () {
   'use strict';
 
@@ -13,13 +15,13 @@
    * 1) STATE — everything the UI needs to know, in one place.
    * ====================================================================== */
   var state = {
-    inks: [],                 // full list from the server
-    familyCounts: {},         // { BLUE: 70, RED: 64, ... } from the server
-    selectedFamilies: new Set(), // which color chips are active (empty = all)
-    search: '',               // text in the search box
-    sort: 'pantone',          // 'pantone' | 'weight'
-    showUsedUp: false,        // include "Used Up" inks?
-    matchTarget: null,        // { hex } when the "closest match" helper is active
+    inks: [],                    // full list from the server
+    familyCounts: {},            // { BLUE: 70, ... } in-stock counts from the server
+    selectedFamilies: new Set(), // active color chips (empty = show all)
+    search: '',                  // text in the search box
+    sort: 'pantone',             // 'pantone' | 'weight'
+    showUsedUp: false,           // include "Used Up" inks?
+    matchTarget: null,           // { hex, lab } when the closest-match helper is on
     loading: true
   };
 
@@ -32,25 +34,37 @@
   };
 
   /* =========================================================================
-   * 2) PANTONE -> HEX matching (uses window.PANTONE_COATED from PantoneData.html)
+   * 2) SERVER CALLS — one tiny helper wraps fetch + JSON + error handling.
    * ====================================================================== */
+  async function api(method, path, body) {
+    var resp = await fetch(path, {
+      method: method,
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var data = await resp.json().catch(function () { return {}; });
+    if (!resp.ok) throw new Error(data.error || ('Request failed (' + resp.status + ')'));
+    return data;
+  }
 
-  // Given a raw code from the sheet, return "#rrggbb" or null (no honest preview).
-  // Our shop stocks coated inks, so everything matches against the solid COATED book.
+  /* =========================================================================
+   * 3) PANTONE -> HEX matching (uses window.PANTONE_COATED from pantone-data.js)
+   *    All our inks are coated, so everything matches the solid coated book.
+   * ====================================================================== */
   function pantoneHex(rawCode) {
     var MAP = window.PANTONE_COATED || {};
     if (rawCode == null || rawCode === '') return null;
     var s = String(rawCode).toLowerCase().trim();
-    // The color book spells it "gray"; our sheet says "grey" — normalize.
+    // The color book spells it "gray"; our data says "grey" — normalize.
     s = s.replace(/grey/g, 'gray');
 
     // Build a few candidate keys and take the first that exists in the map.
     var candidates = [];
     // (a) fully normalized: spaces -> hyphens, strip anything but a-z0-9-
     candidates.push(s.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
-    // (b) drop a trailing finish letter (u/c/m), e.g. "186u" -> "186", "warm red c" -> "warm-red"
+    // (b) drop a trailing finish letter (u/c/m): "186u" -> "186", "warm red c" -> "warm-red"
     candidates.push(s.replace(/[\s-]*[ucm]$/, '').trim().replace(/\s+/g, '-'));
-    // (c) leading digits only, so "165 U" and "2035 U" fall back to the base number
+    // (c) leading digits only, so "165 U" falls back to base number "165"
     var lead = s.match(/^\d{1,4}/);
     if (lead) candidates.push(lead[0]);
 
@@ -58,14 +72,13 @@
       var key = candidates[i];
       if (key && MAP[key]) return MAP[key];
     }
-    return null; // e.g. CMYK-guide codes like "P-115-5" -> neutral "no preview" swatch
+    return null; // e.g. CMYK-guide codes like "P-115-5" -> honest "no preview" swatch
   }
 
   /* =========================================================================
-   * 3) COLOR MATH for the "closest match" helper (hex -> Lab, CIEDE2000)
+   * 4) COLOR MATH for the closest-match helper (hex -> Lab, CIEDE2000).
    *    CIEDE2000 is the industry-standard perceptual color-difference formula.
    * ====================================================================== */
-
   function hexToRgb(hex) {
     var h = String(hex).replace('#', '');
     if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
@@ -81,7 +94,6 @@
       v = v / 255;
       return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92;
     });
-    // linear RGB -> XYZ
     var x = (srgb[0]*0.4124 + srgb[1]*0.3576 + srgb[2]*0.1805) / 0.95047;
     var y = (srgb[0]*0.2126 + srgb[1]*0.7152 + srgb[2]*0.0722) / 1.00000;
     var z = (srgb[0]*0.0193 + srgb[1]*0.1192 + srgb[2]*0.9505) / 1.08883;
@@ -127,13 +139,12 @@
   function textOn(hex) {
     var rgb = hexToRgb(hex);
     if (!rgb) return '#e8eaed';
-    // relative luminance (perceptual-ish)
     var lum = (0.299*rgb.r + 0.587*rgb.g + 0.114*rgb.b) / 255;
     return lum > 0.6 ? '#101216' : '#ffffff';
   }
 
   /* =========================================================================
-   * 4) DOM SHORTCUTS
+   * 5) DOM SHORTCUTS
    * ====================================================================== */
   function $(id) { return document.getElementById(id); }
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
@@ -144,7 +155,7 @@
   }
 
   /* =========================================================================
-   * 5) LOADING DATA FROM THE SERVER
+   * 6) LOADING DATA
    * ====================================================================== */
   function loadInventory() {
     state.loading = true;
@@ -152,14 +163,13 @@
     $('state').className = 'state';
     $('state').hidden = false;
 
-    google.script.run
-      .withSuccessHandler(function (data) { applyInventory(data); })
-      .withFailureHandler(function (err) {
+    api('GET', '/api/inventory')
+      .then(applyInventory)
+      .catch(function (err) {
         state.loading = false;
-        $('state').textContent = 'Could not load inventory: ' + (err && err.message ? err.message : err);
+        $('state').textContent = 'Could not load inventory: ' + err.message;
         $('state').className = 'state error';
-      })
-      .getInventory();
+      });
   }
 
   // Store a server response (from load OR after a write) and re-render.
@@ -167,7 +177,7 @@
     state.loading = false;
     state.inks = (data && data.inks) || [];
     state.familyCounts = (data && data.families) || {};
-    // Attach a computed hex to each ink once, so render() stays cheap.
+    // Attach a computed hex + Lab to each ink once, so render() stays cheap.
     state.inks.forEach(function (ink) {
       ink._hex = pantoneHex(ink.pantone);
       ink._lab = ink._hex ? rgbToLab(hexToRgb(ink._hex)) : null;
@@ -177,18 +187,15 @@
   }
 
   /* =========================================================================
-   * 6) FILTER + SORT PIPELINE
+   * 7) FILTER + SORT PIPELINE
    * ====================================================================== */
   function visibleInks() {
     var q = state.search.trim().toLowerCase();
 
     var list = state.inks.filter(function (ink) {
-      // status filter
       var isUsed = (ink.status || '').toLowerCase() === 'used up';
       if (isUsed && !state.showUsedUp) return false;
-      // family filter (empty selection = show all)
       if (state.selectedFamilies.size && !state.selectedFamilies.has(ink.colorFamily)) return false;
-      // text search across code + description
       if (q) {
         var hay = (ink.pantone + ' ' + (ink.description || '')).toLowerCase();
         if (hay.indexOf(q) === -1) return false;
@@ -196,7 +203,7 @@
       return true;
     });
 
-    // Sorting: close-match mode overrides the normal sort.
+    // Sorting: closest-match mode overrides the normal sort.
     if (state.matchTarget) {
       list.forEach(function (ink) {
         ink._dist = ink._lab ? deltaE00(state.matchTarget.lab, ink._lab) : Infinity;
@@ -222,7 +229,7 @@
   }
 
   /* =========================================================================
-   * 7) RENDERING
+   * 8) RENDERING
    * ====================================================================== */
   function renderChips() {
     var wrap = $('familyChips');
@@ -250,7 +257,7 @@
     var grid = $('grid');
     var list = visibleInks();
 
-    // running count "Showing X of Y inks" (Y excludes used-up unless toggled)
+    // Running count: "Showing X of Y inks" (Y respects the used-up toggle).
     var total = state.inks.filter(function (i) {
       return state.showUsedUp || (i.status || '').toLowerCase() !== 'used up';
     }).length;
@@ -261,7 +268,7 @@
     if (state.loading) return;
 
     if (!list.length) {
-      $('state').textContent = state.inks.length ? 'No inks match your filters.' : 'No inks found in the sheet.';
+      $('state').textContent = state.inks.length ? 'No inks match your filters.' : 'No inks in the database yet.';
       $('state').className = 'state';
       $('state').hidden = false;
       return;
@@ -288,7 +295,7 @@
       swatch.style.background = ink._hex;
       var tcol = textOn(ink._hex);
       codeSpan.style.color = tcol;
-      // Optional closeness badge in match mode.
+      // Closeness badge in match mode.
       if (state.matchTarget && isFinite(ink._dist)) {
         var badge = el('span', 'swatch__badge');
         badge.textContent = 'ΔE ' + ink._dist.toFixed(1);
@@ -338,9 +345,9 @@
   }
 
   /* =========================================================================
-   * 8) MODAL (add / edit)
+   * 9) MODAL (add / edit)
    * ====================================================================== */
-  var editing = null; // holds the ink being edited, or null for "add"
+  var editing = null; // the ink being edited, or null when adding
 
   function fillFamilySelect() {
     var sel = $('f_colorFamily');
@@ -357,9 +364,7 @@
     editing = null;
     $('modalTitle').textContent = 'Add ink';
     $('inkForm').reset();
-    $('f_rowNumber').value = '';
-    $('f_originalPantone').value = '';
-    $('f_colorFamily').disabled = false;
+    $('f_id').value = '';
     // Pre-select the family if exactly one chip is active (nice shortcut).
     if (state.selectedFamilies.size === 1) {
       $('f_colorFamily').value = Array.from(state.selectedFamilies)[0];
@@ -373,19 +378,17 @@
   function openEdit(ink) {
     editing = ink;
     $('modalTitle').textContent = 'Edit ink';
-    $('f_rowNumber').value = ink.rowNumber;
-    $('f_originalPantone').value = ink.pantone;
+    $('f_id').value = ink.id;
     $('f_pantone').value = ink.pantone;
     $('f_description').value = ink.description || '';
     $('f_colorFamily').value = ink.colorFamily || '';
-    $('f_colorFamily').disabled = true; // family = which block the row lives in; don't move rows on edit
     $('f_weight').value = (ink.weight != null ? ink.weight : '');
     $('f_quantity').value = (ink.quantity != null && ink.quantity > 1 ? ink.quantity : '');
     $('f_location').value = ink.location || '';
 
     // Status controls (edit only).
     $('statusRow').hidden = false;
-    setStatusUI((ink.status || 'In Stock'));
+    setStatusUI(ink.status || 'In Stock');
 
     hideFormError();
     showModal();
@@ -411,11 +414,10 @@
   // Gather the form into a plain payload object for the server.
   function readForm() {
     return {
-      rowNumber: $('f_rowNumber').value,
-      originalPantone: $('f_originalPantone').value,
+      id: $('f_id').value,
       pantone: $('f_pantone').value,
       description: $('f_description').value,
-      colorFamily: $('f_colorFamily').value || (editing && editing.colorFamily) || '',
+      colorFamily: $('f_colorFamily').value,
       weight: $('f_weight').value,
       quantity: $('f_quantity').value,
       location: $('f_location').value,
@@ -430,27 +432,20 @@
 
     // Light client-side check; the server validates for real.
     if (!payload.pantone.trim()) { showFormError('Pantone code is required.'); return; }
-    if (!editing && !payload.colorFamily) { showFormError('Please choose a color family.'); return; }
+    if (!payload.colorFamily) { showFormError('Please choose a color family.'); return; }
 
     setBusy(true);
-    // Build the google.script.run chain, THEN call the right method on it.
-    // (withSuccessHandler/withFailureHandler each return a new runner, so the
-    // final method call must happen on that same chained runner.)
-    var runner = google.script.run
-      .withSuccessHandler(function (res) {
+    api(editing ? 'PUT' : 'POST', '/api/inks', payload)
+      .then(function (res) {
         setBusy(false);
         closeModal();
         applyInventory(res.inventory);
         toast(res.message || 'Saved.', 'ok');
       })
-      .withFailureHandler(function (err) {
+      .catch(function (err) {
         setBusy(false);
-        showFormError(err && err.message ? err.message : String(err));
+        showFormError(err.message);
       });
-
-    // When editing we send status too, so a used/back-in-stock flip saves in one go.
-    if (editing) runner.updateInk(payload);
-    else runner.addInk(payload);
   }
 
   function setBusy(b) {
@@ -460,7 +455,7 @@
   }
 
   /* =========================================================================
-   * 9) CLOSE-MATCH HELPER
+   * 10) CLOSEST-MATCH HELPER
    * ====================================================================== */
   function runMatch() {
     var raw = $('matchInput').value.trim();
@@ -473,8 +468,7 @@
       hex = pantoneHex(raw);
     }
     if (!hex) { toast('Could not resolve "' + raw + '" to a color.', 'err'); return; }
-    var rgb = hexToRgb(hex);
-    state.matchTarget = { hex: hex.toLowerCase(), lab: rgbToLab(rgb) };
+    state.matchTarget = { hex: hex.toLowerCase(), lab: rgbToLab(hexToRgb(hex)) };
     $('matchClear').hidden = false;
     render();
   }
@@ -486,7 +480,7 @@
   }
 
   /* =========================================================================
-   * 10) TOAST
+   * 11) TOAST
    * ====================================================================== */
   var toastTimer = null;
   function toast(msg, kind) {
@@ -499,7 +493,7 @@
   }
 
   /* =========================================================================
-   * 11) WIRE UP EVENTS + BOOT
+   * 12) WIRE UP EVENTS + BOOT
    * ====================================================================== */
   function boot() {
     fillFamilySelect();
@@ -533,4 +527,3 @@
     boot();
   }
 })();
-</script>

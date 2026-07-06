@@ -1,0 +1,16 @@
+# Cloudflare configuration for the Ink Inventory app.
+#
+# For the git-connected Pages project this file mainly matters for LOCAL DEV
+# (`npx wrangler pages dev`) — in production you also add the same D1 binding
+# in the dashboard: Workers & Pages → project → Settings → Bindings.
+
+name = "uniq-supply-pantone-inventory"
+pages_build_output_dir = "public"
+compatibility_date = "2026-07-01"
+
+# D1 database binding. The binding name "DB" is what the API code uses (env.DB).
+# After `npx wrangler d1 create ink-inventory`, paste the database_id it prints.
+[[d1_databases]]
+binding = "DB"
+database_name = "ink-inventory"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
