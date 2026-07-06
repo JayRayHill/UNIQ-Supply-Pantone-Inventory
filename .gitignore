@@ -1,0 +1,6 @@
+# Apps Script project credentials/pointers — machine-specific, never commit
+.clasp.json
+
+# OS noise
+.DS_Store
+node_modules/

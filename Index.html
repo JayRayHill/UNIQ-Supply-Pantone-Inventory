@@ -1,0 +1,133 @@
+<!--
+  Index.html — the single page served to the browser.
+  Apps Script inlines the CSS and JS partials via the include() helper in Code.gs,
+  so the whole app ships as ONE document (how HtmlService prefers to work).
+-->
+<!-- Styles first so the page paints correctly as it loads. -->
+<?!= include('Stylesheet'); ?>
+
+<!-- ======================= TOP BAR ======================= -->
+<header class="topbar">
+  <div class="topbar__title">
+    <span class="dot"></span>
+    <h1>Ink Inventory</h1>
+  </div>
+
+  <div class="topbar__tools">
+    <!-- Text search matches Pantone code AND description. -->
+    <input id="search" class="search" type="search" placeholder="Search code or description…" autocomplete="off" />
+
+    <!-- Sort control. -->
+    <label class="select">
+      Sort
+      <select id="sort">
+        <option value="pantone">Pantone code</option>
+        <option value="weight">Weight</option>
+      </select>
+    </label>
+
+    <button id="addBtn" class="btn btn--primary">+ Add ink</button>
+  </div>
+</header>
+
+<!-- ======================= FILTER BAR ======================= -->
+<section class="filters">
+  <!-- Color-family chips get injected here by JavaScript.html. -->
+  <div id="familyChips" class="chips" aria-label="Filter by color family"></div>
+
+  <div class="filters__right">
+    <label class="toggle">
+      <input type="checkbox" id="showUsedUp" />
+      <span>Show used-up</span>
+    </label>
+
+    <!-- "Close match" helper (nice-to-have). Enter a hex or a Pantone code. -->
+    <div class="match">
+      <input id="matchInput" class="search search--sm" type="text" placeholder="Closest to… (#hex or code)" autocomplete="off" />
+      <button id="matchBtn" class="btn btn--ghost">Find</button>
+      <button id="matchClear" class="btn btn--ghost" hidden>Clear</button>
+    </div>
+  </div>
+</section>
+
+<!-- Running count, e.g. "Showing 64 of 320 inks". -->
+<div id="count" class="count"></div>
+
+<!-- ======================= CARD GRID ======================= -->
+<main id="grid" class="grid" aria-live="polite"></main>
+
+<!-- Empty / loading / error states share this element. -->
+<div id="state" class="state">Loading inventory…</div>
+
+<!-- ======================= ADD / EDIT MODAL ======================= -->
+<div id="modal" class="modal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__head">
+      <h2 id="modalTitle">Add ink</h2>
+      <button class="modal__x" data-close aria-label="Close">&times;</button>
+    </div>
+
+    <form id="inkForm" class="form">
+      <!-- Hidden fields carry identity info for edits. -->
+      <input type="hidden" id="f_rowNumber" />
+      <input type="hidden" id="f_originalPantone" />
+
+      <label class="field">
+        <span>Pantone code <em>*</em></span>
+        <!-- type=text on purpose so "165 U" / "P-115-5" never coerce to a number. -->
+        <input id="f_pantone" type="text" maxlength="60" required autocomplete="off" />
+        <small class="hint">Stored exactly as typed (text). e.g. 7706, 185 C, Rhodamine Red</small>
+      </label>
+
+      <label class="field">
+        <span>Description</span>
+        <input id="f_description" type="text" maxlength="255" autocomplete="off" />
+      </label>
+
+      <label class="field">
+        <span>Color family <em>*</em></span>
+        <select id="f_colorFamily" required></select>
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Weight (lbs)</span>
+          <input id="f_weight" type="number" step="0.1" min="0" inputmode="decimal" />
+        </label>
+        <label class="field">
+          <span>Quantity</span>
+          <input id="f_quantity" type="number" step="1" min="1" placeholder="1" inputmode="numeric" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Location</span>
+        <input id="f_location" type="text" maxlength="100" placeholder="e.g. Shelf B3" autocomplete="off" />
+      </label>
+
+      <!-- Edit-only: mark used up / back in stock. -->
+      <div id="statusRow" class="field status-row" hidden>
+        <span>Status</span>
+        <div class="status-toggle">
+          <span id="statusLabel" class="pill">In Stock</span>
+          <button type="button" id="statusToggleBtn" class="btn btn--ghost">Mark used up</button>
+        </div>
+      </div>
+
+      <div id="formError" class="form-error" hidden></div>
+
+      <div class="form__actions">
+        <button type="button" class="btn btn--ghost" data-close>Cancel</button>
+        <button type="submit" id="saveBtn" class="btn btn--primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast for success / error messages. -->
+<div id="toast" class="toast" hidden></div>
+
+<!-- Bundled Pantone hex lookup, then the app logic. Order matters: data first. -->
+<?!= include('PantoneData'); ?>
+<?!= include('JavaScript'); ?>

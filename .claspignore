@@ -1,0 +1,9 @@
+# Files here are NOT uploaded by `clasp push`.
+# Everything else in this folder (appsscript.json, Code.gs, *.html) IS pushed.
+**/**
+!appsscript.json
+!Code.gs
+!Index.html
+!Stylesheet.html
+!JavaScript.html
+!PantoneData.html
