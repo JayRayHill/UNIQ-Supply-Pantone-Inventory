@@ -13,4 +13,4 @@ compatibility_date = "2026-07-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "ink-inventory"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_id = "fcf90879-625a-4dbe-83b3-578a4e882520"
