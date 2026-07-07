@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS inks (
   -- "P-115-5" all live here exactly as typed — no coercion possible in SQL.
   pantone       TEXT    NOT NULL,
   description   TEXT    NOT NULL DEFAULT '',
-  -- One of the eleven families; enforced by the CHECK and by server validation.
+  -- One of the ten families; enforced by the CHECK and by server validation.
   color_family  TEXT    NOT NULL CHECK (color_family IN
-                  ('RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','PINK','WHITE','BLACK','GREY','BROWN')),
+                  ('RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','WHITE','BLACK','GREY','BROWN')),
   weight        REAL,                          -- lbs; NULL = unknown
   quantity      INTEGER NOT NULL DEFAULT 1,    -- number of cans
   location      TEXT    NOT NULL DEFAULT '',   -- shelf/bin; being backfilled via the app

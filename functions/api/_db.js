@@ -8,7 +8,7 @@
  */
 
 // Display order (chips render in this order): rainbow first, then neutrals, brown last.
-export const COLOR_FAMILIES = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'PINK', 'WHITE', 'BLACK', 'GREY', 'BROWN'];
+export const COLOR_FAMILIES = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'WHITE', 'BLACK', 'GREY', 'BROWN'];
 export const STATUS_IN_STOCK = 'In Stock';
 export const STATUS_USED_UP = 'Used Up';
 

@@ -231,17 +231,15 @@
   /* In select mode the whole grid is a picker, not a launcher. */
   .select-mode .card:hover { transform: none; box-shadow: none; }
 
+  /* Second row of the sticky header while select mode is on — travels with
+     the top bar instead of floating over the card grid. */
   .bulkbar {
-    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
-    background: var(--panel);
-    border: 1px solid var(--accent);
-    border-radius: 14px;
-    padding: 10px 14px;
-    box-shadow: var(--shadow);
-    z-index: 40;
-    max-width: 94vw;
+    flex-basis: 100%;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
   }
+  .bulkbar[hidden] { display: none; } /* .bulkbar's display would otherwise override the hidden attribute */
   .bulkbar__count { font-weight: 700; font-size: 14px; padding-right: 2px; }
   .bulkbar__family {
     background: var(--panel-2); color: var(--text);

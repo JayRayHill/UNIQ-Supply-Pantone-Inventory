@@ -40,6 +40,22 @@
     <button id="selectBtn" class="btn">Select</button>
     <button id="addBtn" class="btn btn--primary">+ Add ink</button>
   </div>
+
+  <!-- Bulk actions appear as a second header row while select mode is on,
+       so they ride along with the sticky top bar instead of covering cards. -->
+  <div id="bulkBar" class="bulkbar" hidden>
+    <span id="bulkCount" class="bulkbar__count">0 selected</span>
+
+    <button id="bulkSelectVisible" class="btn btn--ghost">Select visible</button>
+
+    <!-- Choosing a family applies it to every selected card. -->
+    <select id="bulkFamily" class="bulkbar__family">
+      <option value="" disabled selected>Change family…</option>
+    </select>
+
+    <button id="bulkDelete" class="btn btn--danger">Delete</button>
+    <button id="bulkCancel" class="btn btn--ghost">Cancel</button>
+  </div>
 </header>
 
 <!-- ======================= FILTER BAR ======================= -->
@@ -144,21 +160,6 @@
       </div>
     </form>
   </div>
-</div>
-
-<!-- ======================= BULK ACTION BAR (select mode) ======================= -->
-<div id="bulkBar" class="bulkbar" hidden>
-  <span id="bulkCount" class="bulkbar__count">0 selected</span>
-
-  <button id="bulkSelectVisible" class="btn btn--ghost">Select visible</button>
-
-  <!-- Choosing a family applies it to every selected card. -->
-  <select id="bulkFamily" class="bulkbar__family">
-    <option value="" disabled selected>Change family…</option>
-  </select>
-
-  <button id="bulkDelete" class="btn btn--danger">Delete</button>
-  <button id="bulkCancel" class="btn btn--ghost">Cancel</button>
 </div>
 
 <!-- Toast for success / error messages. -->

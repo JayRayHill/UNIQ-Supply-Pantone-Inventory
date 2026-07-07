@@ -29,12 +29,12 @@
   };
 
   // Chip + dropdown order: rainbow first, then neutrals, brown last.
-  var FAMILIES = ['RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','PINK','WHITE','BLACK','GREY','BROWN'];
+  var FAMILIES = ['RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','WHITE','BLACK','GREY','BROWN'];
 
   // Small representative color for each family chip's dot (not a real Pantone).
   var FAMILY_DOT = {
     RED:'#e10600', ORANGE:'#ff6a00', YELLOW:'#ffd400', GREEN:'#12a150', BLUE:'#1668e3',
-    PURPLE:'#7a2ff2', PINK:'#ff4fa3', WHITE:'#f2f2f2', BLACK:'#222327', GREY:'#8a8f98', BROWN:'#7a4a1e'
+    PURPLE:'#7a2ff2', WHITE:'#f2f2f2', BLACK:'#222327', GREY:'#8a8f98', BROWN:'#7a4a1e'
   };
 
   /* =========================================================================
