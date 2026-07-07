@@ -342,8 +342,12 @@
     var codeSpan = el('span', 'swatch__code');
     // Every ink in the shop is coated, so matched codes display with the
     // official "C" finish suffix ("186" -> "186 C"). The database stores the
-    // bare code; this is display-only. Unmatched codes show exactly as stored.
-    codeSpan.textContent = ink._hex && !/c$/i.test(ink.pantone.trim())
+    // bare code; this is display-only. Unmatched codes show exactly as stored,
+    // and shop product inks (White 7706 / Black 7707) skip the suffix — they
+    // aren't Pantone book colors.
+    var shopKey = ink.pantone.toLowerCase().trim().replace(/\s+/g, '-');
+    var isShopInk = (window.PANTONE_SHOP_INKS || {})[shopKey];
+    codeSpan.textContent = ink._hex && !isShopInk && !/c$/i.test(ink.pantone.trim())
       ? ink.pantone + ' C'
       : ink.pantone;
 
