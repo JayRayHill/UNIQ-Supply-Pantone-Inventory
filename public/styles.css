@@ -214,6 +214,8 @@
 
   .form-error { background: rgba(255,93,93,.12); border: 1px solid var(--danger); color: #ffb4b4; padding: 9px 12px; border-radius: 10px; font-size: 13px; }
   .form__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+  /* Delete sits alone on the left, away from Cancel/Save. */
+  .form__delete { margin-right: auto; }
 
   /* ---- toast ------------------------------------------------------------ */
   .toast {

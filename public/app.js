@@ -26,12 +26,13 @@
     loading: true
   };
 
-  var FAMILIES = ['WHITE','BLACK','YELLOW','ORANGE','RED','PURPLE','BLUE','GREEN','BROWN','GREY'];
+  // Chip + dropdown order: rainbow first, then neutrals, brown last.
+  var FAMILIES = ['RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','PINK','WHITE','BLACK','GREY','BROWN'];
 
   // Small representative color for each family chip's dot (not a real Pantone).
   var FAMILY_DOT = {
-    WHITE:'#f2f2f2', BLACK:'#222327', YELLOW:'#ffd400', ORANGE:'#ff6a00', RED:'#e10600',
-    PURPLE:'#7a2ff2', BLUE:'#1668e3', GREEN:'#12a150', BROWN:'#7a4a1e', GREY:'#8a8f98'
+    RED:'#e10600', ORANGE:'#ff6a00', YELLOW:'#ffd400', GREEN:'#12a150', BLUE:'#1668e3',
+    PURPLE:'#7a2ff2', PINK:'#ff4fa3', WHITE:'#f2f2f2', BLACK:'#222327', GREY:'#8a8f98', BROWN:'#7a4a1e'
   };
 
   /* =========================================================================
@@ -420,6 +421,7 @@
       $('f_colorFamily').value = Array.from(state.selectedFamilies)[0];
     }
     $('statusRow').hidden = true;
+    $('deleteBtn').hidden = true; // nothing to delete when adding
     hideFormError();
     showModal();
     $('f_pantone').focus();
@@ -436,8 +438,9 @@
     $('f_quantity').value = (ink.quantity != null && ink.quantity > 1 ? ink.quantity : '');
     $('f_location').value = ink.location || '';
 
-    // Status controls (edit only).
+    // Status + delete controls (edit only).
     $('statusRow').hidden = false;
+    $('deleteBtn').hidden = false;
     setStatusUI(ink.status || 'In Stock');
 
     hideFormError();
@@ -500,8 +503,32 @@
 
   function setBusy(b) {
     $('saveBtn').disabled = b;
+    $('deleteBtn').disabled = b;
     $('inkForm').classList.toggle('is-busy', b);
     $('saveBtn').textContent = b ? 'Saving…' : 'Save';
+  }
+
+  // Permanently remove the ink being edited (with a confirm step).
+  // For real cans that ran out, "Mark used up" is the better choice — it keeps
+  // history. Delete is for rows that shouldn't exist (typos, true duplicates).
+  function deleteInk() {
+    if (!editing) return;
+    var label = editing.pantone + (editing.description ? ' (' + editing.description + ')' : '');
+    if (!window.confirm('Permanently delete ' + label + '?\n\nIf the can just ran out, use "Mark used up" instead — it keeps the history.')) {
+      return;
+    }
+    setBusy(true);
+    api('DELETE', '/api/inks', { id: editing.id })
+      .then(function (res) {
+        setBusy(false);
+        closeModal();
+        applyInventory(res.inventory);
+        toast(res.message || 'Deleted.', 'ok');
+      })
+      .catch(function (err) {
+        setBusy(false);
+        showFormError(err.message);
+      });
   }
 
   /* =========================================================================
@@ -555,6 +582,7 @@
 
     $('addBtn').addEventListener('click', openAdd);
     $('inkForm').addEventListener('submit', submitForm);
+    $('deleteBtn').addEventListener('click', deleteInk);
     $('statusToggleBtn').addEventListener('click', function () {
       setStatusUI(pendingStatus === 'Used Up' ? 'In Stock' : 'Used Up');
     });

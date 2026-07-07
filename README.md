@@ -19,11 +19,13 @@ No Google connection, no frameworks, no build step.
 | `public/app.js` | All client logic: filters, sort, search, swatches, add/edit modal, CIEDE2000 closest-match. |
 | `public/pantone-data.js` | Bundled Pantone *Solid Coated 2024* hex lookup (3,219 colors) — swatches work offline. |
 | `functions/api/inventory.js` | `GET /api/inventory` — read endpoint. |
-| `functions/api/inks.js` | `POST` (add) / `PUT` (update) — the single validated write path. No DELETE exists; "used up" is a status flip and rows are kept as history. |
+| `functions/api/inks.js` | `POST` (add) / `PUT` (update) / `DELETE` — the single validated write path. Deletes are permanent but the full row is written to the audit log first. |
 | `functions/api/_db.js` | Shared server helpers: validation, snapshot, audit log, Access gate. |
 | `db/schema.sql` | D1 tables: `inks` + `log` (audit trail). |
 | `db/seed.sql` | One-time import of the 320 inks from "Ink Inv.xlsx" (2026-07-06). |
 | `db/cleanup-001-coated-dedupe.sql` | Post-import cleanup (already applied): renamed mislabeled `U` codes to coated base codes, merged 3 exact duplicate rows → 317 inks. |
+| `db/cleanup-002-family-fixes.sql` | Hue audit fixes (already applied): 7730→GREEN, 7760→YELLOW, 7770→BROWN, 7710 merge, White 7706 / Black 7707 renames → 316 inks. |
+| `db/cleanup-003-add-pink-family.sql` | Adds the PINK color family (table rebuild; already applied). |
 | `wrangler.toml` | Local-dev config + D1 binding declaration. |
 
 > **Honesty note on colors:** Pantone publishes no official sRGB values. The bundled
@@ -120,7 +122,12 @@ Local writes only touch the local database (under `.wrangler/`, gitignored).
 - **Add ink** — top-right button.
 - **Edit** — click any card. `Location` is the field we're backfilling.
 - **Mark used up** — in the edit modal. Hidden by default; toggle **Show used-up** to see
-  history. Rows are never deleted.
+  history. Prefer this over Delete for real cans that ran out — it keeps the record.
+- **Delete** — in the edit modal (with a confirm step). Permanent; for typos and true
+  duplicates. The full row is written to the audit log before removal.
+- **Families** — chips run rainbow-first: Red, Orange, Yellow, Green, Blue, Purple, Pink,
+  White, Black, Grey, Brown. (PINK was added post-launch; move inks into it by editing
+  their family on the card.)
 - **Show unmatched** — inks whose code can't be matched to a swatch are hidden by default;
   this toggle reveals them (e.g. to fix a mistyped code). They stay in the database either way.
 - **Closest match** — type a `#hex` or Pantone code into "Closest to…"; cards re-sort by

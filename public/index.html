@@ -134,6 +134,9 @@
       <div id="formError" class="form-error" hidden></div>
 
       <div class="form__actions">
+        <!-- Edit-only. Permanent removal (typos / true duplicates); prefer
+             "Mark used up" for real cans so history stays. Asks to confirm. -->
+        <button type="button" id="deleteBtn" class="btn btn--danger form__delete" hidden>Delete</button>
         <button type="button" class="btn btn--ghost" data-close>Cancel</button>
         <button type="submit" id="saveBtn" class="btn btn--primary">Save</button>
       </div>
