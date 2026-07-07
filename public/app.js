@@ -171,14 +171,6 @@
     return hb.l - ha.l;
   }
 
-  // Decide readable text color (black/white) for a given swatch background.
-  function textOn(hex) {
-    var rgb = hexToRgb(hex);
-    if (!rgb) return '#e8eaed';
-    var lum = (0.299*rgb.r + 0.587*rgb.g + 0.114*rgb.b) / 255;
-    return lum > 0.6 ? '#101216' : '#ffffff';
-  }
-
   /* =========================================================================
    * 5) DOM SHORTCUTS
    * ====================================================================== */
@@ -353,13 +345,11 @@
 
     if (ink._hex) {
       swatch.style.background = ink._hex;
-      var tcol = textOn(ink._hex);
-      codeSpan.style.color = tcol;
-      // Closeness badge in match mode.
+      // (The code pill and ΔE badge keep their own dark plates via CSS, so
+      // their text stays white no matter how light the swatch color is.)
       if (state.matchTarget && isFinite(ink._dist)) {
         var badge = el('span', 'swatch__badge');
         badge.textContent = 'ΔE ' + ink._dist.toFixed(1);
-        badge.style.color = tcol;
         swatch.appendChild(badge);
       }
     } else {

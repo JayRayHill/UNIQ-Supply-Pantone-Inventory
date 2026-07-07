@@ -147,15 +147,21 @@
       repeating-linear-gradient(45deg, #2a2f3a 0 8px, #232733 8px 16px);
     color: var(--muted);
   }
+  /* The code pill sits ON the swatch but is not part of the color itself —
+     a consistently dark plate keeps the code white and readable even on the
+     palest pinks and yellows. The swatch color is never altered. */
   .swatch__code {
     font-weight: 700; font-size: 15px;
-    padding: 2px 8px; border-radius: 8px;
-    background: rgba(0,0,0,.28);
+    padding: 2px 9px; border-radius: 8px;
+    background: rgba(13, 15, 19, .66);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
   }
   .swatch__badge {
     font-size: 11px; font-weight: 700;
     padding: 2px 7px; border-radius: 999px;
-    background: rgba(0,0,0,.28);
+    background: rgba(13, 15, 19, .66);
+    color: #fff;
   }
   .swatch__noprev {
     position: absolute; inset: 0;
