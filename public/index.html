@@ -26,10 +26,11 @@
     <!-- Text search matches Pantone code AND description. -->
     <input id="search" class="search" type="search" placeholder="Search code or description…" autocomplete="off" />
 
-    <!-- Sort control. -->
+    <!-- Sort control. Rainbow = perceptual hue order, the default view. -->
     <label class="select">
       Sort
       <select id="sort">
+        <option value="rainbow" selected>Rainbow</option>
         <option value="pantone">Pantone code</option>
         <option value="weight">Weight</option>
       </select>
@@ -48,6 +49,13 @@
     <label class="toggle">
       <input type="checkbox" id="showUsedUp" />
       <span>Show used-up</span>
+    </label>
+
+    <!-- Cards with no swatch preview are hidden by default; this reveals them
+         (needed e.g. to fix a mistyped code that can't be matched). -->
+    <label class="toggle">
+      <input type="checkbox" id="showUnmatched" />
+      <span id="showUnmatchedLabel">Show unmatched</span>
     </label>
 
     <!-- "Close match" helper: enter a target hex or Pantone code. -->

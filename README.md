@@ -23,6 +23,7 @@ No Google connection, no frameworks, no build step.
 | `functions/api/_db.js` | Shared server helpers: validation, snapshot, audit log, Access gate. |
 | `db/schema.sql` | D1 tables: `inks` + `log` (audit trail). |
 | `db/seed.sql` | One-time import of the 320 inks from "Ink Inv.xlsx" (2026-07-06). |
+| `db/cleanup-001-coated-dedupe.sql` | Post-import cleanup (already applied): renamed mislabeled `U` codes to coated base codes, merged 3 exact duplicate rows → 317 inks. |
 | `wrangler.toml` | Local-dev config + D1 binding declaration. |
 
 > **Honesty note on colors:** Pantone publishes no official sRGB values. The bundled
@@ -112,14 +113,20 @@ Local writes only touch the local database (under `.wrangler/`, gitignored).
 
 ## Everyday use
 
-- **Filter** by color-family chips (multi-select) + the search box (code or description).
-- **Sort** by Pantone code or weight.
+- **Filter** by color-family chips (multi-select) + the search box (code or description;
+  a trailing "C" is ignored, so `186 C` finds `186`).
+- **Sort** — **Rainbow** (default; hue order red→orange→yellow→green→blue→violet, with
+  neutrals grouped at the end light→dark), Pantone code, or weight.
 - **Add ink** — top-right button.
 - **Edit** — click any card. `Location` is the field we're backfilling.
 - **Mark used up** — in the edit modal. Hidden by default; toggle **Show used-up** to see
   history. Rows are never deleted.
+- **Show unmatched** — inks whose code can't be matched to a swatch are hidden by default;
+  this toggle reveals them (e.g. to fix a mistyped code). They stay in the database either way.
 - **Closest match** — type a `#hex` or Pantone code into "Closest to…"; cards re-sort by
   CIEDE2000 color distance with a ΔE badge on each swatch.
+- **Coated display** — every shop ink is coated, so matched cards display the official
+  finish suffix (`186 C`); the database stores the bare code.
 
 Every add/edit is appended to the `log` table (timestamp, user email, action, what
 changed). To read it: 

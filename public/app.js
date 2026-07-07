@@ -19,8 +19,9 @@
     familyCounts: {},            // { BLUE: 70, ... } in-stock counts from the server
     selectedFamilies: new Set(), // active color chips (empty = show all)
     search: '',                  // text in the search box
-    sort: 'pantone',             // 'pantone' | 'weight'
+    sort: 'rainbow',             // 'rainbow' | 'pantone' | 'weight'
     showUsedUp: false,           // include "Used Up" inks?
+    showUnmatched: false,        // include inks with no swatch preview?
     matchTarget: null,           // { hex, lab } when the closest-match helper is on
     loading: true
   };
@@ -135,6 +136,41 @@
     );
   }
 
+  // hex -> { h: 0..360 hue, s: 0..1 saturation, l: 0..1 lightness } for rainbow sort.
+  function hexToHsl(hex) {
+    var rgb = hexToRgb(hex);
+    if (!rgb) return null;
+    var r = rgb.r / 255, g = rgb.g / 255, b = rgb.b / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var l = (max + min) / 2;
+    var d = max - min;
+    if (d === 0) return { h: 0, s: 0, l: l }; // pure grey — no hue
+    var s = d / (1 - Math.abs(2 * l - 1));
+    var h;
+    if (max === r)      h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * (((b - r) / d) + 2);
+    else                h = 60 * (((r - g) / d) + 4);
+    if (h < 0) h += 360;
+    return { h: h, s: s, l: l };
+  }
+
+  // Rainbow comparator: chromatic inks sweep red -> orange -> yellow -> green ->
+  // blue -> violet -> pink; near-neutral inks (whites/greys/blacks/browns with
+  // almost no saturation) group at the end, light to dark. Within a similar hue,
+  // lighter inks come first so each band fades naturally.
+  function byRainbow(a, b) {
+    var ha = a._hsl, hb = b._hsl;
+    var aN = !ha || ha.s < 0.14, bN = !hb || hb.s < 0.14; // N = neutral
+    if (aN && bN) return (hb ? hb.l : 0) - (ha ? ha.l : 0); // neutrals: light -> dark
+    if (aN) return 1;  // neutrals after colors
+    if (bN) return -1;
+    // Bucket hue into 12° bands so the order reads as clean color stripes,
+    // then light -> dark inside each band.
+    var bandA = Math.floor(ha.h / 12), bandB = Math.floor(hb.h / 12);
+    if (bandA !== bandB) return bandA - bandB;
+    return hb.l - ha.l;
+  }
+
   // Decide readable text color (black/white) for a given swatch background.
   function textOn(hex) {
     var rgb = hexToRgb(hex);
@@ -177,11 +213,16 @@
     state.loading = false;
     state.inks = (data && data.inks) || [];
     state.familyCounts = (data && data.families) || {};
-    // Attach a computed hex + Lab to each ink once, so render() stays cheap.
+    // Attach computed hex + Lab + HSL to each ink once, so render() stays cheap.
     state.inks.forEach(function (ink) {
       ink._hex = pantoneHex(ink.pantone);
       ink._lab = ink._hex ? rgbToLab(hexToRgb(ink._hex)) : null;
+      ink._hsl = ink._hex ? hexToHsl(ink._hex) : null;
     });
+    // Show how many inks are hidden behind the "unmatched" toggle.
+    var unmatched = state.inks.filter(function (i) { return !i._hex; }).length;
+    var lbl = $('showUnmatchedLabel');
+    if (lbl) lbl.textContent = 'Show unmatched' + (unmatched ? ' (' + unmatched + ')' : '');
     renderChips();
     render();
   }
@@ -191,10 +232,16 @@
    * ====================================================================== */
   function visibleInks() {
     var q = state.search.trim().toLowerCase();
+    // Cards display the coated suffix ("186 C") but the database stores the
+    // bare code — so let a search for "186 c" / "186c" still find "186".
+    q = q.replace(/[\s-]*c$/, '');
 
     var list = state.inks.filter(function (ink) {
       var isUsed = (ink.status || '').toLowerCase() === 'used up';
       if (isUsed && !state.showUsedUp) return false;
+      // No honest color preview -> hidden unless the toggle reveals them
+      // (they still exist in the database; reveal to fix a mistyped code).
+      if (!ink._hex && !state.showUnmatched) return false;
       if (state.selectedFamilies.size && !state.selectedFamilies.has(ink.colorFamily)) return false;
       if (q) {
         var hay = (ink.pantone + ' ' + (ink.description || '')).toLowerCase();
@@ -211,8 +258,10 @@
       list.sort(function (a, b) { return a._dist - b._dist; });
     } else if (state.sort === 'weight') {
       list.sort(function (a, b) { return (b.weight || 0) - (a.weight || 0); });
-    } else {
+    } else if (state.sort === 'pantone') {
       list.sort(byPantone);
+    } else {
+      list.sort(byRainbow); // default
     }
     return list;
   }
@@ -257,9 +306,11 @@
     var grid = $('grid');
     var list = visibleInks();
 
-    // Running count: "Showing X of Y inks" (Y respects the used-up toggle).
+    // Running count: "Showing X of Y inks" (Y respects both visibility toggles).
     var total = state.inks.filter(function (i) {
-      return state.showUsedUp || (i.status || '').toLowerCase() !== 'used up';
+      if (!state.showUsedUp && (i.status || '').toLowerCase() === 'used up') return false;
+      if (!state.showUnmatched && !i._hex) return false;
+      return true;
     }).length;
     $('count').textContent = 'Showing ' + list.length + ' of ' + total + ' inks'
       + (state.matchTarget ? ' · sorted by closeness to ' + state.matchTarget.hex : '');
@@ -289,7 +340,12 @@
     /* ---- swatch ---- */
     var swatch = el('div', 'swatch');
     var codeSpan = el('span', 'swatch__code');
-    codeSpan.textContent = ink.pantone;
+    // Every ink in the shop is coated, so matched codes display with the
+    // official "C" finish suffix ("186" -> "186 C"). The database stores the
+    // bare code; this is display-only. Unmatched codes show exactly as stored.
+    codeSpan.textContent = ink._hex && !/c$/i.test(ink.pantone.trim())
+      ? ink.pantone + ' C'
+      : ink.pantone;
 
     if (ink._hex) {
       swatch.style.background = ink._hex;
@@ -501,6 +557,7 @@
     $('search').addEventListener('input', function () { state.search = this.value; render(); });
     $('sort').addEventListener('change', function () { state.sort = this.value; render(); });
     $('showUsedUp').addEventListener('change', function () { state.showUsedUp = this.checked; render(); });
+    $('showUnmatched').addEventListener('change', function () { state.showUnmatched = this.checked; render(); });
 
     $('addBtn').addEventListener('click', openAdd);
     $('inkForm').addEventListener('submit', submitForm);
