@@ -22,6 +22,8 @@
     sort: 'rainbow',             // 'rainbow' | 'pantone' | 'weight'
     showUsedUp: false,           // include "Used Up" inks?
     showUnmatched: false,        // include inks with no swatch preview?
+    selectMode: false,           // card taps select instead of opening the editor
+    selected: new Set(),         // ids of selected inks (select mode)
     matchTarget: null,           // { hex, lab } when the closest-match helper is on
     loading: true
   };
@@ -390,9 +392,87 @@
 
     card.appendChild(body);
 
-    // Clicking a card opens the edit modal.
-    card.addEventListener('click', function () { openEdit(ink); });
+    if (state.selected.has(ink.id)) card.classList.add('is-selected');
+
+    // Normal mode: open the editor. Select mode: toggle selection.
+    card.addEventListener('click', function () {
+      if (!state.selectMode) { openEdit(ink); return; }
+      if (state.selected.has(ink.id)) {
+        state.selected.delete(ink.id);
+        card.classList.remove('is-selected');
+      } else {
+        state.selected.add(ink.id);
+        card.classList.add('is-selected');
+      }
+      updateBulkBar();
+    });
     return card;
+  }
+
+  /* =========================================================================
+   * SELECT MODE + BULK ACTIONS
+   * ====================================================================== */
+  function enterSelectMode() {
+    state.selectMode = true;
+    state.selected.clear();
+    document.body.classList.add('select-mode');
+    $('selectBtn').textContent = 'Done';
+    $('bulkBar').hidden = false;
+    updateBulkBar();
+  }
+
+  function exitSelectMode() {
+    state.selectMode = false;
+    state.selected.clear();
+    document.body.classList.remove('select-mode');
+    $('selectBtn').textContent = 'Select';
+    $('bulkBar').hidden = true;
+    $('bulkFamily').selectedIndex = 0;
+    render();
+  }
+
+  function updateBulkBar() {
+    var n = state.selected.size;
+    $('bulkCount').textContent = n + ' selected';
+    $('bulkDelete').disabled = !n;
+    $('bulkFamily').disabled = !n;
+  }
+
+  // Select every card that passes the current filters (filter first, then grab all).
+  function selectVisible() {
+    visibleInks().forEach(function (ink) { state.selected.add(ink.id); });
+    render();
+    updateBulkBar();
+  }
+
+  function bulkApply(body, busyEl) {
+    busyEl.disabled = true;
+    api('POST', '/api/bulk', body)
+      .then(function (res) {
+        busyEl.disabled = false;
+        applyInventory(res.inventory);
+        toast(res.message, 'ok');
+        exitSelectMode();
+      })
+      .catch(function (err) {
+        busyEl.disabled = false;
+        toast(err.message, 'err');
+      });
+  }
+
+  function bulkChangeFamily() {
+    var fam = $('bulkFamily').value;
+    if (!fam || !state.selected.size) return;
+    bulkApply({ action: 'family', ids: Array.from(state.selected), colorFamily: fam }, $('bulkFamily'));
+  }
+
+  function bulkDelete() {
+    var n = state.selected.size;
+    if (!n) return;
+    if (!window.confirm('Permanently delete ' + n + ' ink' + (n === 1 ? '' : 's') + '?\n\nIf cans just ran out, use "Mark used up" instead — it keeps the history.')) {
+      return;
+    }
+    bulkApply({ action: 'delete', ids: Array.from(state.selected) }, $('bulkDelete'));
   }
 
   /* =========================================================================
@@ -401,13 +481,16 @@
   var editing = null; // the ink being edited, or null when adding
 
   function fillFamilySelect() {
-    var sel = $('f_colorFamily');
-    sel.innerHTML = '<option value="" disabled selected>Choose…</option>';
-    FAMILIES.forEach(function (fam) {
-      var o = el('option');
-      o.value = fam;
-      o.textContent = fam.charAt(0) + fam.slice(1).toLowerCase();
-      sel.appendChild(o);
+    // Both the modal dropdown and the bulk bar dropdown list every family.
+    [['f_colorFamily', 'Choose…'], ['bulkFamily', 'Change family…']].forEach(function (pair) {
+      var sel = $(pair[0]);
+      sel.innerHTML = '<option value="" disabled selected>' + pair[1] + '</option>';
+      FAMILIES.forEach(function (fam) {
+        var o = el('option');
+        o.value = fam;
+        o.textContent = fam.charAt(0) + fam.slice(1).toLowerCase();
+        sel.appendChild(o);
+      });
     });
   }
 
@@ -583,6 +666,15 @@
     $('addBtn').addEventListener('click', openAdd);
     $('inkForm').addEventListener('submit', submitForm);
     $('deleteBtn').addEventListener('click', deleteInk);
+
+    // Select mode + bulk actions.
+    $('selectBtn').addEventListener('click', function () {
+      state.selectMode ? exitSelectMode() : enterSelectMode();
+    });
+    $('bulkCancel').addEventListener('click', exitSelectMode);
+    $('bulkSelectVisible').addEventListener('click', selectVisible);
+    $('bulkFamily').addEventListener('change', bulkChangeFamily);
+    $('bulkDelete').addEventListener('click', bulkDelete);
     $('statusToggleBtn').addEventListener('click', function () {
       setStatusUI(pendingStatus === 'Used Up' ? 'In Stock' : 'Used Up');
     });

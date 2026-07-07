@@ -217,6 +217,39 @@
   /* Delete sits alone on the left, away from Cancel/Save. */
   .form__delete { margin-right: auto; }
 
+  /* ---- select mode & bulk bar ------------------------------------------- */
+  /* Selected cards get an accent ring and a check badge on the swatch. */
+  .card.is-selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .card.is-selected .swatch::after {
+    content: "✓";
+    position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* In select mode the whole grid is a picker, not a launcher. */
+  .select-mode .card:hover { transform: none; box-shadow: none; }
+
+  .bulkbar {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: var(--shadow);
+    z-index: 40;
+    max-width: 94vw;
+  }
+  .bulkbar__count { font-weight: 700; font-size: 14px; padding-right: 2px; }
+  .bulkbar__family {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 12px; font-size: 14px; outline: none;
+  }
+  .bulkbar__family:focus { border-color: var(--accent); }
+
   /* ---- toast ------------------------------------------------------------ */
   .toast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
