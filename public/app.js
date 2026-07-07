@@ -37,6 +37,14 @@
     PURPLE:'#7a2ff2', WHITE:'#f2f2f2', BLACK:'#222327', GREY:'#8a8f98', BROWN:'#7a4a1e'
   };
 
+  // Ring color when a chip is SELECTED: the family's own color, so the
+  // highlight matches what it's highlighting. Dark families get brightened
+  // variants — their true colors would vanish against the dark background.
+  var FAMILY_RING = {
+    RED:'#ff453a', ORANGE:'#ff8a3d', YELLOW:'#ffd60a', GREEN:'#30c46c', BLUE:'#4f8cff',
+    PURPLE:'#a06bff', WHITE:'#f2f2f2', BLACK:'#b9bfc9', GREY:'#aab2bf', BROWN:'#c98a4b'
+  };
+
   /* =========================================================================
    * 2) SERVER CALLS — one tiny helper wraps fetch + JSON + error handling.
    * ====================================================================== */
@@ -282,7 +290,19 @@
       var count = state.familyCounts[fam] || 0;
       var chip = el('button', 'chip');
       chip.type = 'button';
-      chip.setAttribute('aria-pressed', state.selectedFamilies.has(fam) ? 'true' : 'false');
+
+      // Selected chips highlight in their OWN family color (ring + soft tint),
+      // so the highlight matches the color it represents.
+      function paint() {
+        var on = state.selectedFamilies.has(fam);
+        chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var ring = FAMILY_RING[fam];
+        chip.style.borderColor = on ? ring : '';
+        chip.style.boxShadow = on ? 'inset 0 0 0 1px ' + ring : '';
+        // color-mix keeps the tint subtle; older browsers just skip it.
+        chip.style.background = on ? 'color-mix(in srgb, ' + ring + ' 16%, #1e222b)' : '';
+      }
+
       chip.innerHTML =
         '<span class="swatch-sm" style="background:' + FAMILY_DOT[fam] + '"></span>' +
         esc(fam.charAt(0) + fam.slice(1).toLowerCase()) +
@@ -290,9 +310,10 @@
       chip.addEventListener('click', function () {
         if (state.selectedFamilies.has(fam)) state.selectedFamilies.delete(fam);
         else state.selectedFamilies.add(fam);
-        chip.setAttribute('aria-pressed', state.selectedFamilies.has(fam) ? 'true' : 'false');
+        paint();
         render();
       });
+      paint();
       wrap.appendChild(chip);
     });
   }
