@@ -38,7 +38,7 @@ export function requireDb(env) {
 export async function snapshot(env) {
   const db = requireDb(env);
   const { results } = await db.prepare(
-    'SELECT id, pantone, description, color_family, weight, quantity, location, status, date_added ' +
+    'SELECT id, pantone, description, color_family, weight, quantity, status, date_added ' +
     'FROM inks ORDER BY id'
   ).all();
 
@@ -55,7 +55,6 @@ export async function snapshot(env) {
       colorFamily: r.color_family,
       weight: r.weight,                 // may be null
       quantity: r.quantity || 1,
-      location: r.location || '',
       status: r.status,
       dateAdded: r.date_added || '',
     };
@@ -78,9 +77,6 @@ export function validateInk(payload) {
   const description = String(payload.description == null ? '' : payload.description).trim();
   if (description.length > 255) throw new HttpError(400, 'Description is too long (max 255 characters).');
 
-  const location = String(payload.location == null ? '' : payload.location).trim();
-  if (location.length > 100) throw new HttpError(400, 'Location is too long (max 100 characters).');
-
   let weight = null;
   if (payload.weight !== '' && payload.weight != null) {
     weight = parseFloat(payload.weight);
@@ -102,7 +98,7 @@ export function validateInk(payload) {
 
   const status = (payload.status === STATUS_USED_UP) ? STATUS_USED_UP : STATUS_IN_STOCK;
 
-  return { pantone, description, location, weight, quantity, colorFamily, status };
+  return { pantone, description, weight, quantity, colorFamily, status };
 }
 
 /* ----------------------------------------------------------------------------

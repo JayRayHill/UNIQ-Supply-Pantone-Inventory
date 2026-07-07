@@ -174,8 +174,6 @@
   .card__desc.empty { color: var(--muted); font-weight: 400; font-style: italic; }
   .card__meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 12.5px; }
   .card__meta b { color: var(--text); font-weight: 600; }
-  .card__loc { color: var(--muted); font-size: 12.5px; }
-  .card__loc.empty { color: #6b7280; font-style: italic; }
   .tag-used { color: var(--danger); font-weight: 700; font-size: 11px; letter-spacing: .05em; }
   .tag-match { color: var(--ok); font-weight: 700; font-size: 11px; }
 

@@ -379,11 +379,6 @@
       '<span>Qty <b>' + esc(ink.quantity != null ? ink.quantity : 1) + '</b></span>';
     body.appendChild(meta);
 
-    var loc = el('div', 'card__loc');
-    if (ink.location) { loc.textContent = '📍 ' + ink.location; }
-    else { loc.textContent = '📍 no location set'; loc.classList.add('empty'); }
-    body.appendChild(loc);
-
     if (isUsed) {
       var tag = el('div', 'tag-used');
       tag.textContent = 'USED UP';
@@ -519,7 +514,6 @@
     $('f_colorFamily').value = ink.colorFamily || '';
     $('f_weight').value = (ink.weight != null ? ink.weight : '');
     $('f_quantity').value = (ink.quantity != null && ink.quantity > 1 ? ink.quantity : '');
-    $('f_location').value = ink.location || '';
 
     // Status + delete controls (edit only).
     $('statusRow').hidden = false;
@@ -528,7 +522,7 @@
 
     hideFormError();
     showModal();
-    $('f_location').focus(); // location is what we backfill most
+    $('f_quantity').focus(); // the field most often adjusted on an edit
   }
 
   var pendingStatus = 'In Stock';
@@ -556,7 +550,6 @@
       colorFamily: $('f_colorFamily').value,
       weight: $('f_weight').value,
       quantity: $('f_quantity').value,
-      location: $('f_location').value,
       status: pendingStatus
     };
   }

@@ -31,15 +31,15 @@ export async function onRequestPost({ request, env }) {
     const dateAdded = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // yyyy-mm-dd
 
     await requireDb(env).prepare(
-      'INSERT INTO inks (pantone, description, color_family, weight, quantity, location, status, date_added, updated_at) ' +
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO inks (pantone, description, color_family, weight, quantity, status, date_added, updated_at) ' +
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       v.pantone, v.description, v.colorFamily, v.weight, v.quantity,
-      v.location, v.status, dateAdded, now.toISOString()
+      v.status, dateAdded, now.toISOString()
     ).run();
 
     await appendLog(env, accessEmail(request), 'add', v.pantone,
-      'family=' + v.colorFamily + '; weight=' + v.weight + '; qty=' + v.quantity + '; loc=' + (v.location || '(blank)'));
+      'family=' + v.colorFamily + '; weight=' + v.weight + '; qty=' + v.quantity);
 
     return json({ ok: true, message: 'Added ' + v.pantone + ' to ' + v.colorFamily + '.', inventory: await snapshot(env) });
   } catch (e) {
@@ -65,10 +65,10 @@ export async function onRequestPut({ request, env }) {
 
     await db.prepare(
       'UPDATE inks SET pantone = ?, description = ?, color_family = ?, weight = ?, ' +
-      'quantity = ?, location = ?, status = ?, updated_at = ? WHERE id = ?'
+      'quantity = ?, status = ?, updated_at = ? WHERE id = ?'
     ).bind(
       v.pantone, v.description, v.colorFamily, v.weight, v.quantity,
-      v.location, v.status, new Date().toISOString(), id
+      v.status, new Date().toISOString(), id
     ).run();
 
     // Log a human-readable diff of only the fields that actually changed.
@@ -79,7 +79,6 @@ export async function onRequestPut({ request, env }) {
     track('family', before.color_family, v.colorFamily);
     track('weight', before.weight, v.weight);
     track('qty', before.quantity, v.quantity);
-    track('loc', before.location, v.location);
     track('status', before.status, v.status);
 
     await appendLog(env, accessEmail(request), 'update', v.pantone,
@@ -109,7 +108,7 @@ export async function onRequestDelete({ request, env }) {
     // Hard deletes still leave a full paper trail in the log.
     await appendLog(env, accessEmail(request), 'delete', row.pantone,
       'DELETED — was: family=' + row.color_family + '; desc=' + (row.description || '(blank)') +
-      '; weight=' + row.weight + '; qty=' + row.quantity + '; loc=' + (row.location || '(blank)') +
+      '; weight=' + row.weight + '; qty=' + row.quantity +
       '; status=' + row.status + '; added=' + (row.date_added || '(import)'));
 
     return json({ ok: true, message: 'Deleted ' + row.pantone + '.', inventory: await snapshot(env) });

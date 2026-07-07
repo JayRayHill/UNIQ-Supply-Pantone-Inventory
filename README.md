@@ -27,6 +27,7 @@ No Google connection, no frameworks, no build step.
 | `db/cleanup-002-family-fixes.sql` | Hue audit fixes (already applied): 7730→GREEN, 7760→YELLOW, 7770→BROWN, 7710 merge, White 7706 / Black 7707 renames → 316 inks. |
 | `db/cleanup-003-add-pink-family.sql` | Added a PINK family (table rebuild; superseded by 004). |
 | `db/cleanup-004-remove-pink.sql` | Removed the PINK family again (already applied). |
+| `db/cleanup-005-drop-location.sql` | Dropped the unused location column (already applied). |
 | `wrangler.toml` | Local-dev config + D1 binding declaration. |
 
 > **Honesty note on colors:** Pantone publishes no official sRGB values. The bundled
@@ -121,7 +122,7 @@ Local writes only touch the local database (under `.wrangler/`, gitignored).
 - **Sort** — **Rainbow** (default; hue order red→orange→yellow→green→blue→violet, with
   neutrals grouped at the end light→dark), Pantone code, or weight.
 - **Add ink** — top-right button.
-- **Edit** — click any card. `Location` is the field we're backfilling.
+- **Edit** — click any card to change any field.
 - **Mark used up** — in the edit modal. Hidden by default; toggle **Show used-up** to see
   history. Prefer this over Delete for real cans that ran out — it keeps the record.
 - **Delete** — in the edit modal (with a confirm step). Permanent; for typos and true

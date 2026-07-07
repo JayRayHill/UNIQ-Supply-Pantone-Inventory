@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS inks (
                   ('RED','ORANGE','YELLOW','GREEN','BLUE','PURPLE','WHITE','BLACK','GREY','BROWN')),
   weight        REAL,                          -- lbs; NULL = unknown
   quantity      INTEGER NOT NULL DEFAULT 1,    -- number of cans
-  location      TEXT    NOT NULL DEFAULT '',   -- shelf/bin; being backfilled via the app
   status        TEXT    NOT NULL DEFAULT 'In Stock'
                         CHECK (status IN ('In Stock','Used Up')),
   date_added    TEXT,                          -- ISO date; NULL for the original import
